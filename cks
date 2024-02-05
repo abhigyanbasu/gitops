@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: Pod
+metadata:
+    labels:
+        name: app-xyz
+    name: app-xyz
+    namespace: orion
+spec:
+    containers:
+        -
+            image: nginx
+            name: app-xyz
+            ports:
+            - containerPort: 3306
+            volumeMounts: 
+            - name: secret-volume
+              mountPath: /mnt/connector/password
+              readOnly: true
+    volumes:
+    - name: secret-volume
+      secret:
+        secretName: a-safe-secret
+		
+		
+		
+FALCO 
+
+- rule: Write below binary dir
+  desc: an attempt to write to any file below a set of binary directories
+  condition: >
+    bin_dir and evt.dir = < and open_write
+    and not package_mgmt_procs
+    and not exe_running_docker_save
+    and not python_running_get_pip
+    and not python_running_ms_oms
+    and not user_known_write_below_binary_dir_activities
+  output: >
+    File below a known binary directory opened for writing (user_id=%user.uid file_updated=%fd.name command=%proc.cmdline)
+  priority: CRITICAL
+  
+  
+  - rule: Write below binary dir
+  desc: an attempt to write to any file below a set of binary directories
+  condition: >
+    bin_dir and evt.dir = < and open_write
+    and not package_mgmt_procs
+    and not exe_running_docker_save
+    and not python_running_get_pip
+    and not python_running_ms_oms
+    and not user_known_write_below_binary_dir_activities
+  output: >
+    File below a known binary directory opened for writing (user_id=%user.uid file_updated=%fd.name command=%proc.cmdline)
+  priority: CRITICAL
+  tags: [filesystem, mitre_persistence]
+  
+  
+  CRITICAL File below a known binary directory opened for writing (user_id=user_id file_updated=file_name command=command_that_was_run)
+  
+  
+  
+  
+  ******************NETPOL*********************
+  
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-access
+  namespace: prod-x12cs
+spec:
+  podSelector:
+    matchLabels:
+      run: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              access: redis
+        - podSelector:
+            matchLabels:
+              backend: prod-x12cs
+      ports:
+        - protocol: TCP
+          port: 6379
+  
+  *************************************
+  
+  - rule: Terminal shell in container
+  desc: A shell was used as the entrypoint/exec point into a container with an attached terminal.
+  condition: >
+    spawned_process and container
+    and shell_procs and proc.tty != 0
+    and container_entrypoint
+    and not user_expected_terminal_shell_in_container_conditions
+  output: >
+    %evt.time.s, %user.uid, %container.id, %container.image.repository
+  priority: ALERT
+  tags: [container, shell, mitre_execution]
+  
+  
+  
